@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>F1 타이밍 스톱워치</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  /* 공식 폰트 파일을 fonts/ 폴더에 넣으면 자동 적용됩니다 */
+  @font-face { font-family:"Formula1"; font-weight:400; font-display:swap; src:local("Formula1 Display Regular"), url("fonts/Formula1-Regular.otf") format("opentype"), url("fonts/Formula1-Regular.woff2") format("woff2"); }
+  @font-face { font-family:"Formula1"; font-weight:700; font-display:swap; src:local("Formula1 Display Bold"), url("fonts/Formula1-Bold.otf") format("opentype"), url("fonts/Formula1-Bold.woff2") format("woff2"); }
+  @font-face { font-family:"Formula1"; font-weight:900; font-display:swap; src:local("Formula1 Display Black"), url("fonts/Formula1-Black.otf") format("opentype"), url("fonts/Formula1-Black.woff2") format("woff2"); }
+
+  :root {
+    --bg:#0b0b0e; --panel:#15151a; --panel2:#1d1d24; --line:#2a2a33;
+    --text:#f2f2f5; --muted:#8a8a98;
+    --red:#e10600; --purple:#b44cff; --green:#00e05a; --yellow:#ffd60a;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+    font-family:"Formula1","Titillium Web",-apple-system,"Apple SD Gothic Neo",sans-serif;
+    display:flex; justify-content:center; padding:20px 12px; }
+  .mono { font-family:"Formula1","Share Tech Mono",ui-monospace,Menlo,monospace; font-variant-numeric:tabular-nums; }
+  .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+
+  .screen { width:min(100%,560px); align-self:flex-start; background:var(--panel); border:1px solid var(--line);
+    border-radius:6px; overflow:hidden; box-shadow:0 0 0 1px #000, 0 20px 50px rgba(0,0,0,.6); }
+
+  header { display:flex; align-items:center; justify-content:space-between; padding:10px 14px 10px 20px;
+    background:linear-gradient(90deg,var(--red) 0 6px,var(--panel2) 6px); border-bottom:1px solid var(--line); }
+  .logo { height:20px; display:none; }
+  .logo.ok { display:block; } .logo.ok + .title { display:none; }
+  header .title { font-weight:900; font-style:italic; letter-spacing:1px; font-size:18px; }
+  header .title span { color:var(--red); }
+  header .status { font-size:12px; font-weight:700; letter-spacing:2px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+  .dot { width:9px; height:9px; border-radius:50%; background:var(--muted); }
+  .running .dot { background:var(--green); box-shadow:0 0 8px var(--green); animation:blink 1s infinite; }
+
+  .driver { display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--line); }
+  .pos { background:#fff; color:#000; font-weight:900; width:30px; height:30px; display:grid; place-items:center; border-radius:3px; flex:none; }
+  .team { width:4px; height:30px; background:var(--red); flex:none; }
+  .tag { font-weight:900; font-size:22px; letter-spacing:2px; }
+  .stats { margin-left:auto; display:flex; gap:18px; }
+  .stat { font-size:10px; letter-spacing:2px; color:var(--muted); text-align:right; line-height:1.5; }
+  .stat b { display:block; color:var(--text); font-size:15px; letter-spacing:0; font-weight:400; }
+  .stat b.purple { color:var(--purple); } .stat b.green { color:var(--green); } .stat b.yellow { color:var(--yellow); }
+
+  .live { padding:18px 14px 14px; text-align:center; }
+  .live .lbl { font-size:11px; letter-spacing:3px; color:var(--muted); font-weight:700; }
+  #main { font-size:clamp(44px,15vw,76px); line-height:1.1; color:var(--yellow); text-shadow:0 0 18px rgba(255,214,10,.25); }
+
+  .sectors { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; padding:0 14px 16px; }
+  .sec { background:var(--panel2); padding:8px 10px 12px; border-radius:3px; position:relative; overflow:hidden; }
+  .sec .n { font-size:11px; letter-spacing:2px; color:var(--muted); font-weight:700; }
+  .sec .v { font-size:clamp(17px,5.4vw,22px); margin-top:2px; color:var(--muted); }
+  .sec .bar { position:absolute; left:0; bottom:0; height:4px; width:100%; background:#000; }
+  .sec .bar i { display:block; height:100%; width:0; background:var(--muted); }
+  .sec.active .v { color:#fff; } .sec.active .bar i { background:var(--yellow); width:100%; animation:pulse 1s infinite; }
+  .sec.done .bar i { width:100%; }
+  .sec.purple .v { color:var(--purple); } .sec.purple .bar i { background:var(--purple); }
+  .sec.green .v { color:var(--green); }  .sec.green .bar i { background:var(--green); }
+  .sec.yellow .v { color:var(--yellow); } .sec.yellow .bar i { background:var(--yellow); }
+  @keyframes blink { 50% { opacity:.3; } }
+  @keyframes pulse { 50% { opacity:.35; } }
+
+  .btns { display:grid; grid-template-columns:1fr 1.4fr 1fr; gap:6px; padding:0 14px 14px; }
+  button { font-family:inherit; font-weight:900; letter-spacing:2px; font-size:15px; min-height:52px; padding:0 6px; color:#fff;
+    background:var(--panel2); border:1px solid var(--line); border-radius:3px; cursor:pointer; text-transform:uppercase;
+    touch-action:manipulation; user-select:none; -webkit-tap-highlight-color:transparent; }
+  button:hover:not(:disabled) { border-color:#666; } button:active:not(:disabled) { transform:translateY(1px); }
+  button:disabled { opacity:.35; cursor:default; }
+  button:focus-visible { outline:2px solid #fff; outline-offset:2px; }
+  #start { background:var(--green); color:#000; border-color:var(--green); }
+  .running #start { background:var(--red); color:#fff; border-color:var(--red); }
+  #sector { border-left:3px solid var(--yellow); }
+
+  .scroll { max-height:260px; overflow-y:auto; }
+  table { width:100%; border-collapse:collapse; }
+  thead th { position:sticky; top:0; z-index:1; font-size:11px; letter-spacing:2px; color:var(--muted); text-align:right; padding:8px 10px;
+    background:var(--panel2); box-shadow:inset 0 1px var(--line), inset 0 -1px var(--line); }
+  thead th:first-child { text-align:left; padding-left:14px; }
+  tbody td { text-align:right; padding:9px 10px; font-size:15px; border-bottom:1px solid var(--line); }
+  tbody td:first-child { text-align:left; padding-left:14px; font-family:"Titillium Web",sans-serif; font-weight:700; color:var(--muted); }
+  tbody tr:first-child { background:rgba(255,255,255,.04); }
+  td.purple { color:var(--purple); } td.green { color:var(--green); } td.yellow { color:var(--yellow); }
+  td.total { color:#fff; font-weight:700; }
+  tr.best td.total { color:var(--purple); }
+  .empty { text-align:center; color:var(--muted); padding:22px; font-size:12px; letter-spacing:2px; }
+
+  .teams { display:flex; gap:6px; padding:10px 14px; overflow-x:auto; background:var(--panel2); border-top:1px solid var(--line); }
+  .team-chip { flex:0 0 auto; height:34px; min-width:84px; display:flex; align-items:center; justify-content:center; gap:6px;
+    padding:0 10px; background:var(--panel); border:1px solid var(--line); border-bottom:3px solid var(--c); border-radius:3px;
+    font-size:11px; font-weight:900; letter-spacing:1px; text-transform:uppercase; white-space:nowrap; }
+  .team-chip img { height:20px; max-width:70px; object-fit:contain; }
+  .team-chip.has-logo span { display:none; }
+  footer { padding:8px 14px; font-size:11px; color:var(--muted); letter-spacing:1px; display:flex; gap:14px; flex-wrap:wrap; border-top:1px solid var(--line); }
+  footer i { display:inline-block; width:8px; height:8px; margin-right:4px; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
+  @media (max-width:380px) { .stats { gap:10px; } .tag { font-size:18px; } }
+</style>
+</head>
+<body>
+<div class="screen" id="screen">
+  <header>
+    <img class="logo" id="logo" src="logo.svg" alt="F1">
+    <div class="title"><span>F1</span> TIMING</div>
+    <div class="status"><span class="dot"></span><span id="status">PIT</span></div>
+  </header>
+
+  <div class="driver">
+    <div class="pos">1</div><div class="team"></div><div class="tag">YOU</div>
+    <div class="stats">
+      <div class="stat">LAST<b class="mono" id="last">--:--.---</b></div>
+      <div class="stat">BEST<b class="mono purple" id="best">--:--.---</b></div>
+      <div class="stat">Δ BEST<b class="mono" id="delta">--.---</b></div>
+    </div>
+  </div>
+
+  <div class="live">
+    <div class="lbl" id="lapLabel">LAP 1</div>
+    <div id="main" class="mono">0:00.000</div>
+  </div>
+
+  <div class="sectors">
+    <div class="sec" id="s0"><div class="n">S1</div><div class="v mono">--.---</div><div class="bar"><i></i></div></div>
+    <div class="sec" id="s1"><div class="n">S2</div><div class="v mono">--.---</div><div class="bar"><i></i></div></div>
+    <div class="sec" id="s2"><div class="n">S3</div><div class="v mono">--.---</div><div class="bar"><i></i></div></div>
+  </div>
+
+  <div class="btns">
+    <button id="reset" type="button">Reset</button>
+    <button id="start" type="button">Start</button>
+    <button id="sector" type="button" disabled>Sector</button>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>LAP</th><th>S1</th><th>S2</th><th>S3</th><th>TIME</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="empty" id="empty">NO LAPS RECORDED</div>
+  </div>
+  <div class="teams" id="teams"></div>
+  <footer>
+    <span><i style="background:var(--purple)"></i>BEST OVERALL</span>
+    <span><i style="background:var(--green)"></i>IMPROVED</span>
+    <span><i style="background:var(--yellow)"></i>SLOWER</span>
+    <span>SPACE: START/SECTOR · S: STOP · R: RESET</span>
+  </footer>
+  <div class="sr" id="sr" aria-live="polite"></div>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const secV = i => $('s' + i).querySelector('.v');
+  const fmtS = ms => (ms / 1000).toFixed(3).padStart(6, '0');
+  const fmtL = ms => `${Math.floor(ms / 60000)}:${((ms % 60000) / 1000).toFixed(3).padStart(6, '0')}`;
+  const fmtD = ms => (ms < 0 ? '-' : '+') + (Math.abs(ms) / 1000).toFixed(3);
+
+  let elapsed = 0, t0 = 0, running = false, raf = 0;
+  let lapStart = 0, secStart = 0;
+  let cur = [], curCls = [];        // current lap: sector times and their colors
+  let laps = [];                    // finished laps {s:[3], t}
+  let held = false, holdTimer = 0;  // freeze finished-lap sector colors for a moment
+
+  const now = () => elapsed + (running ? performance.now() - t0 : 0);
+
+  function classify(i, val) {
+    const prev = laps.map(l => l.s[i]);
+    if (!prev.length || val < Math.min(...prev)) return 'purple';
+    return val < prev[prev.length - 1] ? 'green' : 'yellow';
+  }
+
+  function renderSectors() {
+    if (held) return;
+    const live = now() - secStart;
+    for (let i = 0; i < 3; i++) {
+      const el = $('s' + i);
+      if (i < cur.length) { el.className = 'sec done ' + curCls[i]; secV(i).textContent = fmtS(cur[i]); }
+      else if (i === cur.length) { el.className = 'sec' + (running ? ' active' : ''); secV(i).textContent = live > 0 ? fmtS(live) : '--.---'; }
+      else { el.className = 'sec'; secV(i).textContent = '--.---'; }
+    }
+  }
+  function clearHold() { clearTimeout(holdTimer); held = false; renderSectors(); }
+
+  function tick() {
+    const t = now();
+    $('main').textContent = fmtL(t - lapStart);
+    if (!held && cur.length < 3) { const v = t - secStart; if (v > 0) secV(cur.length).textContent = fmtS(v); }
+    if (running) raf = requestAnimationFrame(tick);
+  }
+
+  function setRunning(on) {
+    running = on;
+    $('start').textContent = on ? 'Stop' : 'Start';
+    $('sector').disabled = !on;
+    $('status').textContent = on ? 'ON TRACK' : 'PIT';
+    $('screen').classList.toggle('running', on);
+  }
+
+  function toggle() {
+    if (running) { elapsed += performance.now() - t0; cancelAnimationFrame(raf); setRunning(false); }
+    else { t0 = performance.now(); setRunning(true); }
+    renderSectors(); tick();
+  }
+
+  function sector() {
+    if (!running) return;
+    if (held) clearHold();
+    const t = now(), i = cur.length, val = t - secStart;
+    curCls.push(classify(i, val)); cur.push(val); secStart = t;
+    renderSectors();                       // 3번째 섹터도 최종 값/색으로 먼저 확정
+    if (cur.length === 3) finishLap(t);
+  }
+
+  function finishLap(t) {
+    const total = cur.reduce((a, b) => a + b, 0);
+    laps.push({ s: [...cur], t: total });
+    addRow(laps.length, cur, curCls, total);
+    updateSummary();
+    save();
+    $('sr').textContent = `Lap ${laps.length}, ${fmtL(total)}`;
+    // show finished-lap colors for 1.5s, then arm S1 of the next lap
+    cur = []; curCls = []; lapStart = t; secStart = t;
+    held = true; clearTimeout(holdTimer); holdTimer = setTimeout(clearHold, 1500);
+  }
+
+  function updateSummary() {
+    const n = laps.length, d = $('delta');
+    if (!n) {
+      ['last', 'best'].forEach(id => $(id).textContent = '--:--.---');
+      d.textContent = '--.---'; d.className = 'mono'; $('lapLabel').textContent = 'LAP 1'; return;
+    }
+    const total = laps[n - 1].t;
+    $('last').textContent = fmtL(total);
+    $('best').textContent = fmtL(Math.min(...laps.map(l => l.t)));
+    if (n === 1) { d.textContent = '--.---'; d.className = 'mono'; }
+    else {
+      const diff = total - Math.min(...laps.slice(0, -1).map(l => l.t));
+      d.textContent = fmtD(diff); d.className = 'mono ' + (diff < 0 ? 'purple' : 'yellow');
+    }
+    $('lapLabel').textContent = 'LAP ' + (n + 1);
+    markBest();
+  }
+
+  // 새로고침해도 랩 기록 유지 (저장소를 못 쓰는 환경에선 조용히 무시)
+  const KEY = 'f1-stopwatch-laps';
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(laps)); } catch (e) {} }
+  function restore() {
+    try {
+      const data = JSON.parse(localStorage.getItem(KEY) || '[]');
+      if (!Array.isArray(data)) return;
+      data.forEach(l => {
+        if (l && Array.isArray(l.s) && l.s.length === 3 && l.s.every(Number.isFinite) && Number.isFinite(l.t)) {
+          const cls = l.s.map((v, i) => classify(i, v));
+          laps.push({ s: l.s, t: l.t });
+          addRow(laps.length, l.s, cls, l.t);
+        }
+      });
+      updateSummary();
+    } catch (e) {}
+  }
+
+  function addRow(n, s, cls, total) {
+    $('empty').style.display = 'none';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${n}</td>` + s.map((v, i) => `<td class="mono ${cls[i]}">${fmtS(v)}</td>`).join('') +
+      `<td class="mono total">${fmtL(total)}</td>`;
+    tr.dataset.t = total;
+    $('rows').prepend(tr);
+  }
+  function markBest() {
+    const best = Math.min(...laps.map(l => l.t));
+    [...$('rows').children].forEach(r => r.classList.toggle('best', +r.dataset.t === best));
+  }
+
+  function reset() {
+    cancelAnimationFrame(raf); setRunning(false);
+    clearTimeout(holdTimer); held = false;
+    elapsed = 0; lapStart = 0; secStart = 0; cur = []; curCls = []; laps = [];
+    $('rows').innerHTML = ''; $('empty').style.display = '';
+    updateSummary(); save();
+    renderSectors(); tick();
+  }
+
+  $('start').onclick = toggle; $('sector').onclick = sector; $('reset').onclick = reset;
+  document.addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+    if (e.code === 'Space') {
+      if (e.target.closest && e.target.closest('button')) return;   // 버튼 기본 동작에 맡김 (중복 방지)
+      e.preventDefault(); running ? sector() : toggle();
+    } else if (e.key === 's' || e.key === 'S') { if (running) toggle(); }
+    else if (e.key === 'r' || e.key === 'R') reset();
+  });
+
+  // 로고: logo.svg 가 있을 때만 표시
+  const logo = $('logo');
+  logo.addEventListener('load', () => logo.classList.add('ok'));
+
+  // 팀 배너: teams/<id>.svg (또는 .png) 가 있으면 로고, 없으면 팀 컬러 이름표
+  const TEAMS = [
+    ['mercedes','Mercedes','#27F4D2'], ['ferrari','Ferrari','#E8002D'], ['mclaren','McLaren','#FF8000'],
+    ['redbull','Red Bull','#3671C6'], ['williams','Williams','#64C4FF'], ['astonmartin','Aston Martin','#229971'],
+    ['alpine','Alpine','#0093CC'], ['racingbulls','Racing Bulls','#6692FF'], ['haas','Haas','#B6BABD'],
+    ['audi','Audi','#F50537'], ['cadillac','Cadillac','#AAAAAD']
+  ];
+  const teamsEl = $('teams');
+  TEAMS.forEach(([id, name, c]) => {
+    const chip = document.createElement('div');
+    chip.className = 'team-chip'; chip.style.setProperty('--c', c);
+    chip.innerHTML = `<span>${name}</span>`;
+    teamsEl.appendChild(chip);
+    const tryLoad = exts => {
+      if (!exts.length) return;
+      const img = new Image(); img.alt = name;
+      img.onload = () => { chip.prepend(img); chip.classList.add('has-logo'); };
+      img.onerror = () => tryLoad(exts.slice(1));
+      img.src = `teams/${id}.${exts[0]}`;
+    };
+    tryLoad(['svg', 'png']);
+  });
+
+  restore();
+  renderSectors();
+</script>
+</body>
+</html>
