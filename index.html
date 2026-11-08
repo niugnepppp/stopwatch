@@ -40,7 +40,7 @@
   .driver { display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--line); }
   .pos { background:#fff; color:#000; font-weight:900; width:30px; height:30px; display:grid; place-items:center; border-radius:3px; flex:none; }
   .team { width:4px; height:30px; background:var(--red); flex:none; }
-  .tag { font-weight:900; font-size:22px; letter-spacing:2px; }
+  .tag { font-weight:900; font-size:clamp(15px,4.6vw,22px); letter-spacing:1px; white-space:nowrap; min-width:0; }
   .stats { margin-left:auto; display:flex; gap:18px; }
   .stat { font-size:10px; letter-spacing:2px; color:var(--muted); text-align:right; line-height:1.5; }
   .stat b { display:block; color:var(--text); font-size:15px; letter-spacing:0; font-weight:400; }
@@ -88,6 +88,17 @@
   tr.best td.total { color:var(--purple); }
   .empty { text-align:center; color:var(--muted); padding:22px; font-size:12px; letter-spacing:2px; }
 
+  .ref { padding:12px 14px 14px; background:var(--panel); border-top:1px solid var(--line); }
+  .ref h2 { margin:0 0 8px; font-size:11px; letter-spacing:2px; color:var(--muted); font-weight:700; display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+  .ref h2 b { color:var(--text); }
+  .ref-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+  .ref-cell { background:var(--panel2); border-radius:3px; padding:7px 8px 8px; border-bottom:3px solid var(--purple); min-width:0; }
+  .ref-cell .n { font-size:10px; letter-spacing:2px; color:var(--muted); font-weight:700; }
+  .ref-cell .v { font-size:clamp(14px,4.4vw,18px); color:var(--purple); margin-top:2px; white-space:nowrap; }
+  .ref-cell .d { font-size:10px; letter-spacing:1px; color:var(--muted); margin-top:1px; }
+  .ref-cell.lap { border-bottom-color:var(--yellow); } .ref-cell.lap .v { color:var(--yellow); }
+  .ref-line { margin-top:6px; font-size:11px; letter-spacing:1px; color:var(--muted); display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+  .ref-line b { color:var(--text); font-weight:400; }
   .teams { display:flex; gap:6px; padding:10px 14px; overflow-x:auto; background:var(--panel2); border-top:1px solid var(--line); }
   .team-chip { flex:0 0 auto; height:34px; min-width:84px; display:flex; align-items:center; justify-content:center; gap:6px;
     padding:0 10px; background:var(--panel); border:1px solid var(--line); border-bottom:3px solid var(--c); border-radius:3px;
@@ -98,7 +109,7 @@
   footer i { display:inline-block; width:8px; height:8px; margin-right:4px; }
 
   @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
-  @media (max-width:380px) { .stats { gap:10px; } .tag { font-size:18px; } }
+  @media (max-width:420px) { .stats { gap:10px; } .driver { gap:8px; } .stat b { font-size:13px; } .ref-grid { grid-template-columns:repeat(2,1fr); } }
 </style>
 </head>
 <body>
@@ -110,7 +121,7 @@
   </header>
 
   <div class="driver">
-    <div class="pos">1</div><div class="team"></div><div class="tag">YOU</div>
+    <div class="pos">1</div><div class="team"></div><div class="tag">YUJIN SUNG</div>
     <div class="stats">
       <div class="stat">LAST<b class="mono" id="last">--:--.---</b></div>
       <div class="stat">BEST<b class="mono purple" id="best">--:--.---</b></div>
@@ -142,12 +153,26 @@
     </table>
     <div class="empty" id="empty">NO LAPS RECORDED</div>
   </div>
+  <section class="ref" aria-label="Monaco 2026 best times">
+    <h2><span>MONACO GP 2026 · BEST</span><b>QUALIFYING</b></h2>
+    <div class="ref-grid">
+      <div class="ref-cell"><div class="n">S1</div><div class="v mono">18.827</div><div class="d">VER</div></div>
+      <div class="ref-cell"><div class="n">S2</div><div class="v mono">33.957</div><div class="d">HAM</div></div>
+      <div class="ref-cell"><div class="n">S3</div><div class="v mono">19.083</div><div class="d">VER</div></div>
+      <div class="ref-cell lap"><div class="n">BEST LAP</div><div class="v mono">1:12.051</div><div class="d">ANT · POLE</div></div>
+    </div>
+    <div class="ref-line">
+      <span>RACE BEST SECTORS <b class="mono">19.379 · 34.566 · 19.536</b> (ANT)</span>
+      <span>RACE FASTEST LAP <b class="mono">1:13.481</b> (ANT)</span>
+    </div>
+  </section>
   <div class="teams" id="teams"></div>
   <footer>
     <span><i style="background:var(--purple)"></i>BEST OVERALL</span>
     <span><i style="background:var(--green)"></i>IMPROVED</span>
     <span><i style="background:var(--yellow)"></i>SLOWER</span>
     <span>SPACE: START/SECTOR · S: STOP · R: RESET</span>
+    <span>MONACO DATA: FIA TIMING</span>
   </footer>
   <div class="sr" id="sr" aria-live="polite"></div>
 </div>
